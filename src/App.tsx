@@ -1,16 +1,15 @@
-import { Call, CallAgent, CallClient, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent } from '@azure/communication-calling';
+import { Call, CallAgent, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
 import { AzureCommunicationTokenCredential, CommunicationUserIdentifier } from '@azure/communication-common';
-import { CallAdapter, CallAdapterLocator, CallAgentProvider, CallClientProvider, CallComposite, CallProvider, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, StatefulCallClient } from '@azure/communication-react';
-import { initializeIcons, PrimaryButton, registerIcons, Text } from '@fluentui/react';
+import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, StatefulCallClient } from '@azure/communication-react';
+import { initializeIcons, PrimaryButton, Text } from '@fluentui/react';
 import { useEffect, useMemo, useState } from 'react';
-import { CallingComponents } from './CallingComp';
 import './App.css';
 
 export function App() {
 
   initializeIcons();
-  const token1: string = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwNiIsIng1dCI6Im9QMWFxQnlfR3hZU3pSaXhuQ25zdE5PU2p2cyIsInR5cCI6IkpXVCJ9.eyJza3lwZWlkIjoiYWNzOmI2YWFkYTFmLTBiMWQtNDdhYy04NjZmLTkxYWFlMDBhMWQwMV8wMDAwMDAxNC03NzJkLTkyYTgtMjhmNC0zNDNhMGQwMDRkZGUiLCJzY3AiOjE3OTIsImNzaSI6IjE2NjU3NjQ0MjEiLCJleHAiOjE2NjU4NTA4MjEsImFjc1Njb3BlIjoidm9pcCIsInJlc291cmNlSWQiOiJiNmFhZGExZi0wYjFkLTQ3YWMtODY2Zi05MWFhZTAwYTFkMDEiLCJyZXNvdXJjZUxvY2F0aW9uIjoidW5pdGVkc3RhdGVzIiwiaWF0IjoxNjY1NzY0NDIxfQ.L5aQii8JV0wJKRb6pP_QxOLgT7TOM4SUr1dc0UFIGB5g_4vyUi3ydNvBkaJ67labGIdD4POJwBT7__jJJlIuD75FyY1fLC24zQ6s3CPro6c5cLVoc2Wg6rAgaN9H4AHj3lYMk-DFddy69z2VN9c_7OIV8tvU0wG4LNukqbKYylLTRggS4ZdqiTx8bqvn5o_hj8d4vK9RCeTBrVxouII7Sg8auJNgq6htrnFwQRcXQ4WZkWyfV4YwNjVP9AaMDAQb8UOA8PdJzaCuPgueyURRG39jCUDAjNjTBRTU365zhNPGJwMfmRheV4Ig2l5rJZ4MXSDApqIJHRIt2reibeMNHQ';
-  const userId: string = '8:acs:b6aada1f-0b1d-47ac-866f-91aae00a1d01_00000014-772d-92a8-28f4-343a0d004dde';
+  const token1: string = '<Enter Token>';
+  const userId: string = '<Enter userId>';
 
   const [statefulClient, setStatefulClient] = useState<StatefulCallClient>();
   // because we are creating the callAgent with the stateful client this should be the declaritive version
@@ -87,8 +86,11 @@ export function App() {
   };
 
   const onAcceptCall = async (): Promise<void> => {
-    if (incomingCall) {
-      const call = await incomingCall.accept();
+    if (incomingCall && statefulClient) {
+      const deviceManager = (await statefulClient.getDeviceManager());
+      const cameras = await deviceManager.getCameras();
+      const localStream = new LocalVideoStream(cameras[0]);
+      const call = await incomingCall.accept({videoOptions: {localVideoStreams: [localStream]}});
       
       setCall(call);
     }
@@ -97,23 +99,8 @@ export function App() {
 
   if (statefulClient && callAgent && call && adapter) {
     return (
-      <div className="App">
-        {/**
-       * input for calling someone
-       * 
-       */}
-        {/* <CallClientProvider callClient={statefulClient}>
-          <CallAgentProvider>
-            <CallProvider call={call}>
-              {adapter && (
-                <Text>yay adapter created</Text>
-              )}
-              <CallingComponents></CallingComponents>
-            </CallProvider>
-          </CallAgentProvider>
-        </CallClientProvider> */}
+      <div className="App" style={{height: '80vh'}}>
         <CallComposite adapter={adapter}/>
-
       </div>
     );
   } else {
