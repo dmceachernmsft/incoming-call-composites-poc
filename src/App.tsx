@@ -1,8 +1,8 @@
 import { Call, CallAgent, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
 import { AzureCommunicationTokenCredential, CommunicationUserIdentifier } from '@azure/communication-common';
 import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, StatefulCallClient } from '@azure/communication-react';
-import { initializeIcons, PrimaryButton, Text } from '@fluentui/react';
-import { useEffect, useMemo, useState } from 'react';
+import { initializeIcons, PrimaryButton, Stack, Text } from '@fluentui/react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './App.css';
 
 export function App() {
@@ -16,6 +16,8 @@ export function App() {
   const [callAgent, setCallAgent] = useState<CallAgent>();
   const [incomingCall, setIncomingCall] = useState<IncomingCall>();
   const [call, setCall] = useState<Call>();
+
+  const callsOnHold = useRef<Call[]>([]);
 
   const [adapter, setAdapter] = useState<CallAdapter>();
 
@@ -35,11 +37,13 @@ export function App() {
     }
   }, [statefulClient, userId]);
 
+  callsOnHold.current = callAgent?.calls.filter((c) => c.state === 'LocalHold') ?? [];
+
   // create call agent
   useEffect(() => {
     if (callAgent === undefined && statefulClient) {
       const agentTime = async (): Promise<void> => {
-        setCallAgent(await statefulClient.createCallAgent(tokenToken, {displayName: 'whats happening?'}));
+        setCallAgent(await statefulClient.createCallAgent(tokenToken, { displayName: 'whats happening?' }));
       }
       agentTime();
     }
@@ -50,7 +54,7 @@ export function App() {
       const incomingCallListener: IncomingCallEvent = ({ incomingCall }) => {
         setIncomingCall(incomingCall);
       }
-      const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: {added: Call[], removed: Call[]}) => {
+      const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
 
         console.log(args.added);
         const createAdapter = async () => {
@@ -68,7 +72,7 @@ export function App() {
             setAdapter(adapter);
           }
         }
-        createAdapter();      
+        createAdapter();
       }
       callAgent.on('incomingCall', incomingCallListener);
       callAgent.on('callsUpdated', callUpdatedListener);
@@ -85,13 +89,29 @@ export function App() {
     setIncomingCall(undefined);
   };
 
+  const renderHeldCall = useCallback((call: Call) => {
+    return (
+      <Stack>
+        <Text>{call.state}</Text>
+        <Text>{call.remoteParticipants}</Text>
+      </Stack>
+    )
+  }, []);
+
+  const renderheldCalls = callsOnHold.current.map((call: Call): JSX.Element => {
+    return renderHeldCall(call);
+  });
+
   const onAcceptCall = async (): Promise<void> => {
+    if (call) {
+      call.hold();
+    }
     if (incomingCall && statefulClient) {
       const deviceManager = (await statefulClient.getDeviceManager());
       const cameras = await deviceManager.getCameras();
       const localStream = new LocalVideoStream(cameras[0]);
-      const call = await incomingCall.accept({videoOptions: {localVideoStreams: [localStream]}});
-      
+      const call = await incomingCall.accept({ videoOptions: { localVideoStreams: [localStream] } });
+
       setCall(call);
     }
     setIncomingCall(undefined);
@@ -99,17 +119,29 @@ export function App() {
 
   if (statefulClient && callAgent && call && adapter) {
     return (
-      <div className="App" style={{height: '80vh'}}>
-        <CallComposite adapter={adapter}/>
-      </div>
+      <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
+        {incomingCall && (<Text>You have a call!</Text>)}
+        <Stack>
+          <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
+          <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
+        </Stack>
+        <Stack>
+          {renderheldCalls}
+        </Stack>
+        <Stack>
+          <CallComposite adapter={adapter} />
+        </Stack>
+      </Stack>
     );
   } else {
-    return (<>
-      <Text>your userId: {userId}</Text>
-      {incomingCall && (<Text>You have a call!</Text>)}
-      <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
-      <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
-    </>)
+    return (
+      <Stack>
+        <Text>your userId: {userId}</Text>
+        {incomingCall && (<Text>You have a call!</Text>)}
+        <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
+        <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
+      </Stack>
+    )
   }
 
 }
