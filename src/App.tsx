@@ -9,8 +9,8 @@ import './App.css';
 export function App() {
 
   initializeIcons();
-  const token1: string = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwNiIsIng1dCI6Im9QMWFxQnlfR3hZU3pSaXhuQ25zdE5PU2p2cyIsInR5cCI6IkpXVCJ9.eyJza3lwZWlkIjoiYWNzOmRkOTc1M2MwLTZlNjItNGY3NC1hYjBmLWM5NGY5NzIzYjRlYl8wMDAwMDAxNC1lMzVkLTIyNmUtOTczMy0zNzNhMGQwMDNmOTAiLCJzY3AiOjE3OTIsImNzaSI6IjE2Njc1Nzk0NzciLCJleHAiOjE2Njc2NjU4NzcsImFjc1Njb3BlIjoidm9pcCIsInJlc291cmNlSWQiOiJkZDk3NTNjMC02ZTYyLTRmNzQtYWIwZi1jOTRmOTcyM2I0ZWIiLCJyZXNvdXJjZUxvY2F0aW9uIjoidW5pdGVkc3RhdGVzIiwiaWF0IjoxNjY3NTc5NDc3fQ.qaRhUeARlBEVFYOFNMuJywm8eNZjZzsrH7KbrknHHxXzeyGJzTzO0uV_sUBgnpk7xXRmcj_yrKgG9pwLmLUDgmPxU_tSND-zpp1bBZqqTbQCxqIxoCUlbvVExVvqHm_wF6UNiwdPCJRBs0Ow6ti26FPaQnkJUo0JxU_jGJFAl3MVkEBRXBVJEBlnW88vJbRLHdahA6vUvu9tGc6RbOjazF0K_twks1GTex92bwLBHz-_vvGFOvB2ZwJvBOicokPtlW8l8hb0ZX2Mi0HguTQysJJk4AgYX_Ny0kdTE0zCoTOQgzx_SXMgM4FCzwGjzFMrvzJkhexBXszInjWiNFIPJw';
-  const userId: string = '8:acs:dd9753c0-6e62-4f74-ab0f-c94f9723b4eb_00000014-e35d-226e-9733-373a0d003f90';
+  const token1: string = '<ACS token>';
+  const userId: string = '<ACS user ID>';
 
   const [statefulClient, setStatefulClient] = useState<StatefulCallClient>();
   // because we are creating the callAgent with the stateful client this should be the declaritive version
