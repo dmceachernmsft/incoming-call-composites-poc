@@ -1,9 +1,8 @@
-import { Call, CallAgent, CallClient, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
+import { Call, CallAgent, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
 import { AzureCommunicationTokenCredential, CommunicationUserIdentifier } from '@azure/communication-common';
 import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, StatefulCallClient } from '@azure/communication-react';
-import { addDirectionalKeyCode, initializeIcons, PrimaryButton, Stack, Text } from '@fluentui/react';
+import { initializeIcons, PrimaryButton, Stack, Text } from '@fluentui/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
 import './App.css';
 
 export function App() {
@@ -19,8 +18,6 @@ export function App() {
   const [call, setCall] = useState<Call>();
 
   const [adapter, setAdapter] = useState<CallAdapter>();
-
-  const ch = new BroadcastChannel('adapterChannel');
 
   initializeIcons();
 
@@ -71,7 +68,6 @@ export function App() {
           }
         }
         createAdapter();
-        ch.postMessage({callAgent: callAgent, statefulClient: statefulClient, adapter: adapter});
       }
       callAgent.on('incomingCall', incomingCallListener);
       callAgent.on('callsUpdated', callUpdatedListener);
@@ -114,54 +110,32 @@ export function App() {
     setIncomingCall(undefined);
   };
 
-  const callScreen = (): JSX.Element => {
-    const ch = new BroadcastChannel('adapterListener');
-    ch.onmessage = (e) => {
-      console.log(e.data);
-    };
-    if (statefulClient && callAgent && call && adapter) {
-      return (
-        <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
-          {incomingCall && (<Text>You have a call!</Text>)}
-          <Stack horizontal>
-            <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
-            <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
-          </Stack>
-          <Stack style={{ height: '80vh' }}>
-            <CallComposite adapter={adapter} />
-          </Stack>
-        </Stack>
-      );
-    }
-    else {
-      return <>Something is wrong...</>
-    }
-  }
-
-  const homeScreen = (): JSX.Element => {
+  if (statefulClient && callAgent && call && adapter) {
     return (
-      <Stack>
-        <Text>your userId: {userId}</Text>
+      <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
         {incomingCall && (<Text>You have a call!</Text>)}
         <Stack horizontal>
           <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
           <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
         </Stack>
+        <Stack style={{ height: '80vh' }}>
+          <CallComposite adapter={adapter} />
+        </Stack>
       </Stack>
-    )
+    );
   }
 
-  const router = createBrowserRouter([{
-    path: '/',
-    element: homeScreen()
-  }, {
-    path: '/call',
-    element: callScreen()
-  }])
-
   return (
-    <RouterProvider router={router} />
+    <Stack>
+      <Text>your userId: {userId}</Text>
+      {incomingCall && (<Text>You have a call!</Text>)}
+      <Stack horizontal>
+        <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
+        <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
+      </Stack>
+    </Stack>
   )
 }
+
 
 export default App;
