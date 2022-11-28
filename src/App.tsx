@@ -60,8 +60,6 @@ export function App() {
         setIncomingCalls(callAgent.incomingCalls);
       }
       const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
-
-        console.log(args.added);
         const createAdapter = async () => {
           if (statefulClient && callAgent && incomingCall) {
             // add console logs in this constructor to figure out whats ahppening
@@ -110,8 +108,19 @@ export function App() {
     setIncomingCall(undefined);
   };
 
+  /**
+   * This is a example of how Contoso might create the incoming Call notifications in thier app.
+   * the incomingCalls referenced here can come from either the declaritiveCallAgent or the adapter.
+   * 
+   * TODO: how do we make sure that the adapter has access to the readOnly array from the declarativeCallAgent and 
+   * not the array from the callContext?
+   * 
+   * note: this could be exported as its own component to allow the rendering of multiple toasts together, just pass
+   * in an array of incomingCalls.
+   * 
+   * @returns Toast notifications for each incoming call
+   */
   const renderIncomingCalls = (): JSX.Element => {
-    console.log(incomingCalls);
     const incomingCallToasts = incomingCalls.map((c) => (
       <IncomingCallToast
         incomingCall={c}
