@@ -16,7 +16,7 @@ export function App() {
   // because we are creating the callAgent with the stateful client this should be the declaritive version
   const [callAgent, setCallAgent] = useState<DeclarativeCallAgent>();
   const [incomingCall, setIncomingCall] = useState<IncomingCall>();
-  const [heldCalls, setHeldCalls] = useState<Call>([]);
+  const [heldCalls, setHeldCalls] = useState<Call[]>([]);
   // how do we get this to map against the incoming calls in the call agent?
   /**
    * Something we need to look into here is how do we avoid Contoso doing this even at the stateful
