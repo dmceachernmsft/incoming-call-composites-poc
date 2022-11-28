@@ -1,20 +1,28 @@
 import { Call, CallAgent, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
 import { AzureCommunicationTokenCredential, CommunicationUserIdentifier } from '@azure/communication-common';
-import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, StatefulCallClient } from '@azure/communication-react';
+import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, DeclarativeCallAgent, StatefulCallClient } from '@azure/communication-react';
 import { initializeIcons, PrimaryButton, Stack, Text } from '@fluentui/react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import './App.css';
+import { IncomingCallToast } from './Components/IncomingCallToast';
 
 export function App() {
 
   initializeIcons();
-  const token1: string = '<ACS token>';
-  const userId: string = '<ACS user ID>';
+  const token1: string = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwNiIsIng1dCI6Im9QMWFxQnlfR3hZU3pSaXhuQ25zdE5PU2p2cyIsInR5cCI6IkpXVCJ9.eyJza3lwZWlkIjoiYWNzOmRkOTc1M2MwLTZlNjItNGY3NC1hYjBmLWM5NGY5NzIzYjRlYl8wMDAwMDAxNS01ZmY4LWQ3YzMtZTE2Ny01NjNhMGQwMGQxNjkiLCJzY3AiOjE3OTIsImNzaSI6IjE2Njk2NzAwNTYiLCJleHAiOjE2Njk3NTY0NTYsImFjc1Njb3BlIjoidm9pcCIsInJlc291cmNlSWQiOiJkZDk3NTNjMC02ZTYyLTRmNzQtYWIwZi1jOTRmOTcyM2I0ZWIiLCJyZXNvdXJjZUxvY2F0aW9uIjoidW5pdGVkc3RhdGVzIiwiaWF0IjoxNjY5NjcwMDU2fQ.gnbBDS2aLFNLuHUoMygpotqHkm0ATp3vJGrxwGe2rgnohJIkR9k1o5FOx6FvksUMUBg3vCWAH3wWJt3XfUr9RefoDIgWgupEdmuGeZSqv66CONdN-ZjINwMYC5KMyYGDH-_BOba2QRdyh88Y3euTJaPQ-0u9UuBiY3HGHcCsq_koel9_PhvYCjn8ymeDgDV97fdaV-4hmxQbhjS9TwuEPwNEcku0WgIw4Pcige-J8SpyHL4A2tpA7BfkGI8toNhRSLdDT6ejO2YqIrAJntG3saUpQ1JPQjaOyZJRD9_FjaRuJdDlGbGJLpn_vvKa9zgJoOCUHfoSQv3DyC6kD7Jc9g';
+  const userId: string = '8:acs:dd9753c0-6e62-4f74-ab0f-c94f9723b4eb_00000015-5ff8-d7c3-e167-563a0d00d169';
 
   const [statefulClient, setStatefulClient] = useState<StatefulCallClient>();
   // because we are creating the callAgent with the stateful client this should be the declaritive version
-  const [callAgent, setCallAgent] = useState<CallAgent>();
+  const [callAgent, setCallAgent] = useState<DeclarativeCallAgent>();
   const [incomingCall, setIncomingCall] = useState<IncomingCall>();
+  const [heldCalls, setHeldCalls] = useState<Call>([]);
+  // how do we get this to map against the incoming calls in the call agent?
+  /**
+   * Something we need to look into here is how do we avoid Contoso doing this even at the stateful
+   * layer?
+   */
+  const [incomingCalls, setIncomingCalls] = useState<readonly IncomingCall[]>([]);
   const [call, setCall] = useState<Call>();
 
   const [adapter, setAdapter] = useState<CallAdapter>();
@@ -49,6 +57,7 @@ export function App() {
     if (callAgent !== undefined) {
       const incomingCallListener: IncomingCallEvent = ({ incomingCall }) => {
         setIncomingCall(incomingCall);
+        setIncomingCalls(callAgent.incomingCalls);
       }
       const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
 
@@ -77,23 +86,14 @@ export function App() {
     }
   }, [callAgent, incomingCall, statefulClient]);
 
-  const onRejectCall = (): void => {
-    if (incomingCall) {
-      incomingCall.reject();
+  const onRejectCall = (call: IncomingCall): void => {
+    if (call) {
+      call.reject();
     }
     setIncomingCall(undefined);
   };
 
-  const renderHeldCall = useCallback((call: Call) => {
-    return (
-      <Stack>
-        <Text>{call.state}</Text>
-        <Text>{call.remoteParticipants}</Text>
-      </Stack>
-    )
-  }, []);
-
-  const onAcceptCall = async (): Promise<void> => {
+  const onAcceptCall = async (incomingCall: IncomingCall): Promise<void> => {
     if (incomingCall && adapter) {
       const newCall = await incomingCall.accept();
       adapter.switchCall(newCall, call);
@@ -110,29 +110,34 @@ export function App() {
     setIncomingCall(undefined);
   };
 
+  const renderIncomingCalls = (): JSX.Element => {
+    console.log(incomingCalls);
+    const incomingCallToasts = incomingCalls.map((c) => (
+      <IncomingCallToast
+        incomingCall={c}
+        callerName={c.callerInfo.displayName}
+        onClickAccept={onAcceptCall}
+        onClickReject={onRejectCall}
+      />));
+    return <Stack style={{ position: "absolute", bottom: "2rem", right: "2rem" }}>{incomingCallToasts}</Stack>
+  }
+
   if (statefulClient && callAgent && call && adapter) {
     return (
       <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
-        {incomingCall && (<Text>You have a call!</Text>)}
-        <Stack horizontal>
-          <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
-          <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
-        </Stack>
         <Stack style={{ height: '80vh' }}>
           <CallComposite adapter={adapter} />
         </Stack>
+        {renderIncomingCalls()}
       </Stack>
     );
   }
 
   return (
-    <Stack>
+    <Stack styles={{ root: { margin: 'auto', height: '36rem' } }}>
       <Text>your userId: {userId}</Text>
       {incomingCall && (<Text>You have a call!</Text>)}
-      <Stack horizontal>
-        <PrimaryButton onClick={onAcceptCall}>Accept Call</PrimaryButton>
-        <PrimaryButton onClick={onRejectCall}>Reject Call</PrimaryButton>
-      </Stack>
+      {renderIncomingCalls()}
     </Stack>
   )
 }
