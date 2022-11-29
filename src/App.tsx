@@ -2,7 +2,7 @@ import { Call, CallAgent, CollectionUpdatedEvent, IncomingCall, IncomingCallEven
 import { AzureCommunicationTokenCredential, CommunicationUserIdentifier } from '@azure/communication-common';
 import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, DeclarativeCallAgent, StatefulCallClient } from '@azure/communication-react';
 import { initializeIcons, PrimaryButton, Stack, Text } from '@fluentui/react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import './App.css';
 import { IncomingCallToast } from './Components/IncomingCallToast';
 
@@ -62,7 +62,6 @@ export function App() {
       const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
         const createAdapter = async () => {
           if (statefulClient && callAgent && incomingCall) {
-            // add console logs in this constructor to figure out whats ahppening
             const adapter = await createAzureCommunicationCallAdapterFromClient(
               statefulClient,
               callAgent,
@@ -75,7 +74,9 @@ export function App() {
           }
         }
         createAdapter();
+        setHeldCalls(callAgent.calls.filter((c) => c.state === 'LocalHold'));
       }
+      
       callAgent.on('incomingCall', incomingCallListener);
       callAgent.on('callsUpdated', callUpdatedListener);
       return () => {
@@ -131,24 +132,33 @@ export function App() {
     return <Stack style={{ position: "absolute", bottom: "2rem", right: "2rem" }}>{incomingCallToasts}</Stack>
   }
 
-  if (statefulClient && callAgent && call && adapter) {
-    return (
-      <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
-        <Stack style={{ height: '80vh' }}>
-          <CallComposite adapter={adapter} />
-        </Stack>
-        {renderIncomingCalls()}
-      </Stack>
-    );
-  }
+  const renderHeldCalls = (): JSX.Element => {
+    const heldCallToasts = heldCalls.map((c) => <Stack>
+      <Text style={{fontWeight: 600, height:'1rem', padding: '0.25rem'}}>{c.id}</Text>
+    </Stack >)
+    return <Stack style={{ position: "absolute", bottom: "2rem", left: "2rem" }}>{heldCallToasts}</Stack>
+}
 
+if (statefulClient && callAgent && call && adapter) {
   return (
-    <Stack styles={{ root: { margin: 'auto', height: '36rem' } }}>
-      <Text>your userId: {userId}</Text>
-      {incomingCall && (<Text>You have a call!</Text>)}
+    <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
+      <Stack style={{ height: '80vh' }}>
+        <CallComposite adapter={adapter} />
+      </Stack>
       {renderIncomingCalls()}
+      {renderHeldCalls()}
     </Stack>
-  )
+  );
+}
+
+return (
+  <Stack styles={{ root: { margin: 'auto', height: '36rem' } }}>
+    <Text>your userId: {userId}</Text>
+    {incomingCall && (<Text>You have a call!</Text>)}
+    {renderIncomingCalls()}
+    {renderHeldCalls()}
+  </Stack>
+)
 }
 
 
