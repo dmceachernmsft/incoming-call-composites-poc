@@ -17,10 +17,12 @@ export function App() {
   const [callAgent, setCallAgent] = useState<DeclarativeCallAgent>();
   const [incomingCall, setIncomingCall] = useState<IncomingCall>();
   const [heldCalls, setHeldCalls] = useState<Call[]>([]);
-  // how do we get this to map against the incoming calls in the call agent?
   /**
-   * Something we need to look into here is how do we avoid Contoso doing this even at the stateful
-   * layer?
+   * We need to add incomingCalls array to the adapters. 
+   * 
+   * Something important here is that we need this reference to be on the incoming calls in the 
+   * DeclarativeCallAgent. This is because the reference to the array in the CallContext loses the 
+   * Handlers so Contoso and the adapters cannot accept or reject calls with this refference.
    */
   const [incomingCalls, setIncomingCalls] = useState<readonly IncomingCall[]>([]);
   const [call, setCall] = useState<Call>();
@@ -28,7 +30,7 @@ export function App() {
   const [adapter, setAdapter] = useState<CallAdapter>();
 
   initializeIcons();
-
+  console.log(heldCalls);
   const tokenToken = useMemo(() => {
     return new AzureCommunicationTokenCredential(token1);
   }, [token1]);
@@ -57,6 +59,10 @@ export function App() {
     if (callAgent !== undefined) {
       const incomingCallListener: IncomingCallEvent = ({ incomingCall }) => {
         setIncomingCall(incomingCall);
+        /**
+         * This is working here because this reference to the CallAgent is to the DeclarativeCallAgent
+         * which has an readOnlyArray of DeclarativeIncomingCalls. This allows Contoso to accept and reject on these Calls.
+         */
         setIncomingCalls(callAgent.incomingCalls);
       }
       const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
@@ -96,6 +102,12 @@ export function App() {
     if (incomingCall && adapter) {
       const newCall = await incomingCall.accept();
       adapter.switchCall(newCall, call);
+      if(call){
+        /**
+         * This shows that we should have a handler to invoke getting all the held calls from within the adapter.
+         */
+        setHeldCalls(heldCalls.concat([call]));
+      }
       // have adapter process new call
       setCall(newCall);
     } else if (incomingCall && statefulClient) {
@@ -135,6 +147,10 @@ export function App() {
   const renderHeldCalls = (): JSX.Element => {
     const heldCallToasts = heldCalls.map((c) => <Stack>
       <Text style={{fontWeight: 600, height:'1rem', padding: '0.25rem'}}>{c.id}</Text>
+      {adapter && <PrimaryButton onClick={() => {
+        adapter.switchCall(c, call);
+        setCall(c);
+      }}>Resume Call</PrimaryButton>}
     </Stack >)
     return <Stack style={{ position: "absolute", bottom: "2rem", left: "2rem" }}>{heldCallToasts}</Stack>
 }
