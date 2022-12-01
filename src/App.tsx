@@ -166,7 +166,7 @@ export function App() {
 
   const renderHeldCalls = (): JSX.Element => {
     const heldCallToasts = heldCalls.map((c) => <Stack>
-      <Text style={{ fontWeight: 600, height: '1rem', padding: '0.25rem' }}>{c.id}</Text>
+      <Text style={{ fontWeight: 600, height: '1rem', margin: '0.25rem' }}>Caller: {c.callerInfo.displayName}</Text>
       {adapter && <PrimaryButton onClick={async () => {
         /**
          * This must be awaited otherwise when we are checking the callAgent for the held
@@ -190,7 +190,7 @@ export function App() {
   if (statefulClient && callAgent && adapter) {
     return (
       <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
-        <Stack style={{ height: '80vh' }}>
+        <Stack horizontal style={{ height: '80vh' }}>
           <CallComposite adapter={adapter} />
         </Stack>
         {renderIncomingCalls()}
