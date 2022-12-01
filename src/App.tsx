@@ -1,4 +1,4 @@
-import { Call, CallAgent, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
+import { Call, CollectionUpdatedEvent, IncomingCall, IncomingCallEvent, LocalVideoStream } from '@azure/communication-calling';
 import { AzureCommunicationTokenCredential, CommunicationUserIdentifier } from '@azure/communication-common';
 import { CallAdapter, CallAdapterLocator, CallComposite, createAzureCommunicationCallAdapterFromClient, createStatefulCallClient, DeclarativeCallAgent, StatefulCallClient } from '@azure/communication-react';
 import { initializeIcons, PrimaryButton, Stack, Text } from '@fluentui/react';
@@ -9,13 +9,12 @@ import { IncomingCallToast } from './Components/IncomingCallToast';
 export function App() {
 
   initializeIcons();
-  const token1: string = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjEwNiIsIng1dCI6Im9QMWFxQnlfR3hZU3pSaXhuQ25zdE5PU2p2cyIsInR5cCI6IkpXVCJ9.eyJza3lwZWlkIjoiYWNzOmRkOTc1M2MwLTZlNjItNGY3NC1hYjBmLWM5NGY5NzIzYjRlYl8wMDAwMDAxNS01ZmY4LWQ3YzMtZTE2Ny01NjNhMGQwMGQxNjkiLCJzY3AiOjE3OTIsImNzaSI6IjE2Njk2NzAwNTYiLCJleHAiOjE2Njk3NTY0NTYsImFjc1Njb3BlIjoidm9pcCIsInJlc291cmNlSWQiOiJkZDk3NTNjMC02ZTYyLTRmNzQtYWIwZi1jOTRmOTcyM2I0ZWIiLCJyZXNvdXJjZUxvY2F0aW9uIjoidW5pdGVkc3RhdGVzIiwiaWF0IjoxNjY5NjcwMDU2fQ.gnbBDS2aLFNLuHUoMygpotqHkm0ATp3vJGrxwGe2rgnohJIkR9k1o5FOx6FvksUMUBg3vCWAH3wWJt3XfUr9RefoDIgWgupEdmuGeZSqv66CONdN-ZjINwMYC5KMyYGDH-_BOba2QRdyh88Y3euTJaPQ-0u9UuBiY3HGHcCsq_koel9_PhvYCjn8ymeDgDV97fdaV-4hmxQbhjS9TwuEPwNEcku0WgIw4Pcige-J8SpyHL4A2tpA7BfkGI8toNhRSLdDT6ejO2YqIrAJntG3saUpQ1JPQjaOyZJRD9_FjaRuJdDlGbGJLpn_vvKa9zgJoOCUHfoSQv3DyC6kD7Jc9g';
-  const userId: string = '8:acs:dd9753c0-6e62-4f74-ab0f-c94f9723b4eb_00000015-5ff8-d7c3-e167-563a0d00d169';
+  const token1: string = '<ACSToken>';
+  const userId: string = '<userId>';
 
   const [statefulClient, setStatefulClient] = useState<StatefulCallClient>();
   // because we are creating the callAgent with the stateful client this should be the declaritive version
   const [callAgent, setCallAgent] = useState<DeclarativeCallAgent>();
-  const [incomingCall, setIncomingCall] = useState<IncomingCall>();
   const [heldCalls, setHeldCalls] = useState<Call[]>([]);
   /**
    * We need to add incomingCalls array to the adapters. 
@@ -23,6 +22,8 @@ export function App() {
    * Something important here is that we need this reference to be on the incoming calls in the 
    * DeclarativeCallAgent. This is because the reference to the array in the CallContext loses the 
    * Handlers so Contoso and the adapters cannot accept or reject calls with this refference.
+   * 
+   * TODO: Check with calling to see if there is a way to detect when a incoming call has been accepted.
    */
   const [incomingCalls, setIncomingCalls] = useState<readonly IncomingCall[]>([]);
   const [call, setCall] = useState<Call>();
@@ -35,6 +36,9 @@ export function App() {
     return new AzureCommunicationTokenCredential(token1);
   }, [token1]);
 
+  /**
+   * Create statefulClient
+   */
   useEffect(() => {
     if (!statefulClient) {
       setStatefulClient(
@@ -45,7 +49,9 @@ export function App() {
     }
   }, [statefulClient, userId]);
 
-  // create call agent
+  /**
+   * Create CallAgent
+   */
   useEffect(() => {
     if (callAgent === undefined && statefulClient) {
       const agentTime = async (): Promise<void> => {
@@ -55,23 +61,23 @@ export function App() {
     }
   }, [callAgent, statefulClient, tokenToken]);
 
+  /**
+   * Create the handlers for the CallAgents events
+   */
   useEffect(() => {
     if (callAgent !== undefined) {
       const incomingCallListener: IncomingCallEvent = ({ incomingCall }) => {
-        setIncomingCall(incomingCall);
-        /**
-         * This is working here because this reference to the CallAgent is to the DeclarativeCallAgent
-         * which has an readOnlyArray of DeclarativeIncomingCalls. This allows Contoso to accept and reject on these Calls.
-         */
         setIncomingCalls(callAgent.incomingCalls);
       }
       const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
+        console.log('calls added')
+        console.log(args.added);
         const createAdapter = async () => {
-          if (statefulClient && callAgent && incomingCall) {
+          if (statefulClient && callAgent) {
             const adapter = await createAzureCommunicationCallAdapterFromClient(
               statefulClient,
               callAgent,
-              ({ participantIds: [(incomingCall.callerInfo.identifier as CommunicationUserIdentifier).communicationUserId] }) as CallAdapterLocator)
+              ({ participantIds: [(args.added[0].callerInfo.identifier as CommunicationUserIdentifier).communicationUserId] }) as CallAdapterLocator)
             adapter.on('callEnded', () => {
               console.log(adapter.getState().endedCall);
             });
@@ -82,43 +88,46 @@ export function App() {
         createAdapter();
         setHeldCalls(callAgent.calls.filter((c) => c.state === 'LocalHold'));
       }
-      
+
       callAgent.on('incomingCall', incomingCallListener);
       callAgent.on('callsUpdated', callUpdatedListener);
       return () => {
         callAgent.off('incomingCall', incomingCallListener);
       }
     }
-  }, [callAgent, incomingCall, statefulClient]);
+  }, [callAgent, statefulClient]);
 
   const onRejectCall = (call: IncomingCall): void => {
     if (call) {
       call.reject();
     }
-    setIncomingCall(undefined);
   };
 
   const onAcceptCall = async (incomingCall: IncomingCall): Promise<void> => {
-    if (incomingCall && adapter) {
+    if (adapter && callAgent) {
       const newCall = await incomingCall.accept();
       adapter.switchCall(newCall, call);
-      if(call){
+      if (call) {
         /**
          * This shows that we should have a handler to invoke getting all the held calls from within the adapter.
          */
         setHeldCalls(heldCalls.concat([call]));
       }
+      /**
+       * In the changes to the UI Lib we are now removing incomingCalls when we accept them so we want to capture the 
+       * current incomingCalls in the CallAgent
+       */
+      setIncomingCalls(callAgent.incomingCalls);
       // have adapter process new call
       setCall(newCall);
-    } else if (incomingCall && statefulClient) {
+    } else if (statefulClient && callAgent) {
       const deviceManager = (await statefulClient.getDeviceManager());
       const cameras = await deviceManager.getCameras();
       const localStream = new LocalVideoStream(cameras[0]);
       const call = await incomingCall.accept({ videoOptions: { localVideoStreams: [localStream] } });
-
+      setIncomingCalls(callAgent.incomingCalls);
       setCall(call);
     }
-    setIncomingCall(undefined);
   };
 
   /**
@@ -131,6 +140,9 @@ export function App() {
    * note: this could be exported as its own component to allow the rendering of multiple toasts together, just pass
    * in an array of incomingCalls.
    * 
+   * note: something that Contoso should know about is setting the zIndex of these notifications so that the notifications
+   * show over their application. THIS SHOULD BE A PART OF THE DOCUMENTATION (maybe part of the API?)
+   * 
    * @returns Toast notifications for each incoming call
    */
   const renderIncomingCalls = (): JSX.Element => {
@@ -141,40 +153,54 @@ export function App() {
         onClickAccept={onAcceptCall}
         onClickReject={onRejectCall}
       />));
-    return <Stack style={{ position: "absolute", bottom: "2rem", right: "2rem" }}>{incomingCallToasts}</Stack>
+    return <Stack style={{ position: "absolute", bottom: "2rem", right: "2rem", zIndex: 3 }}>{incomingCallToasts}</Stack>
   }
 
   const renderHeldCalls = (): JSX.Element => {
     const heldCallToasts = heldCalls.map((c) => <Stack>
-      <Text style={{fontWeight: 600, height:'1rem', padding: '0.25rem'}}>{c.id}</Text>
-      {adapter && <PrimaryButton onClick={() => {
-        adapter.switchCall(c, call);
+      <Text style={{ fontWeight: 600, height: '1rem', padding: '0.25rem' }}>{c.id}</Text>
+      {adapter && <PrimaryButton onClick={async () => {
+        /**
+         * This must be awaited otherwise when we are checking the callAgent for the held
+         * calls the array might not be updated after the adapter has finished holding the call that it
+         * currently is in.
+         */
+        await adapter.switchCall(c, call);
         setCall(c);
+        if (callAgent) {
+          setHeldCalls(callAgent.calls.filter((c) => c.state === 'LocalHold'));
+        }
+
       }}>Resume Call</PrimaryButton>}
     </Stack >)
     return <Stack style={{ position: "absolute", bottom: "2rem", left: "2rem" }}>{heldCallToasts}</Stack>
-}
+  }
 
-if (statefulClient && callAgent && call && adapter) {
-  return (
-    <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
-      <Stack style={{ height: '80vh' }}>
-        <CallComposite adapter={adapter} />
+  /**
+   * Render the CallComposite with a call if in call
+   */
+  if (statefulClient && callAgent && adapter) {
+    return (
+      <Stack className="App" style={{ height: '80%', margin: 'auto' }}>
+        <Stack style={{ height: '80vh' }}>
+          <CallComposite adapter={adapter} />
+        </Stack>
+        {renderIncomingCalls()}
+        {renderHeldCalls()}
       </Stack>
+    );
+  }
+
+  /**
+   * render simple homescreen with userId for easy Calling. App only accepts incoming calls
+   */
+  return (
+    <Stack styles={{ root: { margin: 'auto', height: '36rem' } }}>
+      <Text>your userId: {userId}</Text>
       {renderIncomingCalls()}
       {renderHeldCalls()}
     </Stack>
-  );
-}
-
-return (
-  <Stack styles={{ root: { margin: 'auto', height: '36rem' } }}>
-    <Text>your userId: {userId}</Text>
-    {incomingCall && (<Text>You have a call!</Text>)}
-    {renderIncomingCalls()}
-    {renderHeldCalls()}
-  </Stack>
-)
+  )
 }
 
 
