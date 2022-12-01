@@ -6,7 +6,7 @@
     "@azure/communication-calling": "1.9.1-beta.1",
     "@azure/communication-chat": "^1.2.0",
     "@azure/communication-common": "^2.1.0",
-    "@azure/communication-react": ".\\deps\\azure-communication-react-1.4.1-beta.1-inbound-playground.tgz",
+    "@azure/communication-react": ".\\deps\\azure-communication-react-1.4.1-beta.2-inbound-playground.tgz",
     "@fluentui/react": "^8.97.2",
     "@testing-library/jest-dom": "^5.16.5",
     "@testing-library/react-hooks": "^3.4.2",

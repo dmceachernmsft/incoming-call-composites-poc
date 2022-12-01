@@ -112,10 +112,16 @@ export function App() {
   };
 
   const onAcceptCall = async (incomingCall: IncomingCall): Promise<void> => {
+    /**
+     * There is a race condition here when accepting two calls rapidly.
+     * 
+     * First call will not be placed on hold because it wont be in state yet so 
+     * switchCall wont hold the original call.
+     */
     if (adapter && callAgent) {
       const newCall = await incomingCall.accept();
       adapter.switchCall(newCall, call);
-      if (call) {
+      if (call && call.state !== 'Disconnected') {
         /**
          * This shows that we should have a handler to invoke getting all the held calls from within the adapter.
          */
