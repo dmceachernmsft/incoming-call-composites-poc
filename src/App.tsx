@@ -105,12 +105,22 @@ export function App() {
     }
   }, [callAgent, adapter, statefulClient]);
 
+  /**
+   * Handler for rejecting a call.
+   * 
+   * @param call incomingCall from the CallAgent that can be rejected
+   */
   const onRejectCall = (call: IncomingCall): void => {
     if (call) {
       call.reject();
     }
   };
 
+  /**
+   * Handler for accepting a call.
+   * 
+   * @param incomingCall Incoming Call from the CallAgent
+   */
   const onAcceptCall = async (incomingCall: IncomingCall): Promise<void> => {
     /**
      * There is a race condition here when accepting two calls rapidly.
@@ -170,6 +180,11 @@ export function App() {
     return <Stack style={{ position: "absolute", bottom: "2rem", right: "2rem", zIndex: 3 }}>{incomingCallToasts}</Stack>
   }
 
+  /**
+   * rendering for held calls, allows user to see who is on hold in each call
+   * 
+   * @returns Rendered controls for switching between calls
+   */
   const renderHeldCalls = (): JSX.Element => {
     const heldCallToasts = heldCalls.map((c) => <Stack>
       <Text style={{ fontWeight: 600, height: '1rem', margin: '0.25rem' }}>Caller: {c.callerInfo.displayName}</Text>
