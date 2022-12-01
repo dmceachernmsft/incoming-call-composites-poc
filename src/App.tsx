@@ -23,7 +23,6 @@ export function App() {
    * DeclarativeCallAgent. This is because the reference to the array in the CallContext loses the 
    * Handlers so Contoso and the adapters cannot accept or reject calls with this refference.
    * 
-   * TODO: Check with calling to see if there is a way to detect when a incoming call has been accepted.
    */
   const [incomingCalls, setIncomingCalls] = useState<readonly IncomingCall[]>([]);
   const [call, setCall] = useState<Call>();
@@ -70,8 +69,15 @@ export function App() {
         setIncomingCalls(callAgent.incomingCalls);
       }
       const callUpdatedListener: CollectionUpdatedEvent<Call> = async (args: { added: Call[], removed: Call[] }) => {
-        console.log('calls added')
-        console.log(args.added);
+        /**
+         * We create the adapter in the callsUpdated event handler because we can't make the adapter
+         * ahead of the CallAgent having a call.
+         * 
+         * note: there is a flash of the configuration screen while the composite is processing the new call.
+         * 
+         * Question: should we make a new screen if the adapter detects that there is a call in the agent and 
+         * send it to 'processingCall?'
+         */
         const createAdapter = async () => {
           if (statefulClient && callAgent) {
             const adapter = await createAzureCommunicationCallAdapterFromClient(
@@ -81,11 +87,12 @@ export function App() {
             adapter.on('callEnded', () => {
               console.log(adapter.getState().endedCall);
             });
-            adapter.getState().page = 'call';
             setAdapter(adapter);
           }
         }
-        createAdapter();
+        if(!adapter){
+          createAdapter();
+        }
         setHeldCalls(callAgent.calls.filter((c) => c.state === 'LocalHold'));
       }
 
@@ -93,9 +100,10 @@ export function App() {
       callAgent.on('callsUpdated', callUpdatedListener);
       return () => {
         callAgent.off('incomingCall', incomingCallListener);
+        callAgent.off('callsUpdated', callUpdatedListener);
       }
     }
-  }, [callAgent, statefulClient]);
+  }, [callAgent, adapter, statefulClient]);
 
   const onRejectCall = (call: IncomingCall): void => {
     if (call) {
