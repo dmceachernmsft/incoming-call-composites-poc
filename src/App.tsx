@@ -9,7 +9,7 @@ import { IncomingCallToast } from './Components/IncomingCallToast';
 export function App() {
 
   initializeIcons();
-  const token1: string = '<ACSToken>';
+  const token1: string = '<ACStoken>';
   const userId: string = '<userId>';
 
   const [statefulClient, setStatefulClient] = useState<StatefulCallClient>();
@@ -121,36 +121,42 @@ export function App() {
    * 
    * @param incomingCall Incoming Call from the CallAgent
    */
-  const onAcceptCall = async (incomingCall: IncomingCall): Promise<void> => {
+  const onAcceptCall = async (incomingCall: IncomingCall, cameraOn: boolean): Promise<void> => {
     /**
      * There is a race condition here when accepting two calls rapidly.
      * 
      * First call will not be placed on hold because it wont be in state yet so 
      * switchCall wont hold the original call.
+     * 
+     * Adapter should look at all calls that are not on hold and hold them as part of processing a new call.
      */
-    if (adapter && callAgent) {
-      const newCall = await incomingCall.accept();
-      adapter.switchCall(newCall, call);
-      if (call && call.state !== 'Disconnected') {
-        /**
-         * This shows that we should have a handler to invoke getting all the held calls from within the adapter.
-         */
-        setHeldCalls(heldCalls.concat([call]));
-      }
-      /**
-       * In the changes to the UI Lib we are now removing incomingCalls when we accept them so we want to capture the 
-       * current incomingCalls in the CallAgent
-       */
-      setIncomingCalls(callAgent.incomingCalls);
-      // have adapter process new call
-      setCall(newCall);
-    } else if (statefulClient && callAgent) {
+    if(statefulClient){
       const deviceManager = (await statefulClient.getDeviceManager());
       const cameras = await deviceManager.getCameras();
       const localStream = new LocalVideoStream(cameras[0]);
-      const call = await incomingCall.accept({ videoOptions: { localVideoStreams: [localStream] } });
-      setIncomingCalls(callAgent.incomingCalls);
-      setCall(call);
+      const videoOptions = { videoOptions: { localVideoStreams: [localStream] } }
+      if (adapter && callAgent) {
+
+        const newCall = await incomingCall.accept(cameraOn ? videoOptions : {});
+        adapter.switchCall(newCall, call);
+        if (call && call.state !== 'Disconnected') {
+          /**
+           * This shows that we should have a handler to invoke getting all the held calls from within the adapter.
+           */
+          setHeldCalls(heldCalls.concat([call]));
+        }
+        /**
+         * In the changes to the UI Lib we are now removing incomingCalls when we accept them so we want to capture the 
+         * current incomingCalls in the CallAgent
+         */
+        setIncomingCalls(callAgent.incomingCalls);
+        // have adapter process new call
+        setCall(newCall);
+      } else if (statefulClient && callAgent) {
+        const call = await incomingCall.accept(cameraOn ? videoOptions : {});
+        setIncomingCalls(callAgent.incomingCalls);
+        setCall(call);
+      }
     }
   };
 

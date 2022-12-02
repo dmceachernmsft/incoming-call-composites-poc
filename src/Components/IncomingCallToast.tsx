@@ -25,7 +25,7 @@ export type IncomingCallToastProps = {
     /** Caller's Avatar/Profile Image */
     avatar?: string;
     /** Provide a function that handles the call behavior when Accept Button is clicked */
-    onClickAccept: (c: IncomingCall) => Promise<void>;
+    onClickAccept: (c: IncomingCall, cameraOn: boolean) => Promise<void>;
     /** Provide a function that handles the call behavior when Reject Button is clicked */
     onClickReject: (c: IncomingCall) => void;
     /** Incoming Call the toast is for */
@@ -66,7 +66,12 @@ export const IncomingCallToast = (props: IncomingCallToastProps): JSX.Element =>
                 />
                 <DefaultButton
                     className={incomingCallAcceptButtonStyle}
-                    onClick={() => onClickAccept(incomingCall)}
+                    onClick={() => onClickAccept(incomingCall, true)}
+                    onRenderIcon={() => <Video20Filled style={{ display: 'flex' }} />}
+                />
+                <DefaultButton
+                    className={incomingCallAcceptButtonStyle}
+                    onClick={() => onClickAccept(incomingCall, false)}
                     onRenderIcon={() => <Call20Filled style={{ display: 'flex' }} />}
                 />
             </Stack>
@@ -173,7 +178,7 @@ export const IncomingCallModal = (props: IncomingCallModalProps): JSX.Element =>
                     />
 
                     <DefaultButton
-                        onClick={() => onClickAccept(incomingCall)}
+                        onClick={() => onClickAccept(incomingCall, false)}
                         text="Accept"
                         style={{ background: palette.green, border: 'none' }}
                     />
