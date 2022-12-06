@@ -9,7 +9,7 @@ import { IncomingCallToast } from './Components/IncomingCallToast';
 export function App() {
 
   initializeIcons();
-  const token1: string = '<ACStoken>';
+  const token1: string = '<ACSToken>';
   const userId: string = '<userId>';
 
   const [statefulClient, setStatefulClient] = useState<StatefulCallClient>();
@@ -138,12 +138,9 @@ export function App() {
       if (adapter && callAgent) {
 
         const newCall = await incomingCall.accept(cameraOn ? videoOptions : {});
-        adapter.switchCall(newCall, call);
-        if (call && call.state !== 'Disconnected') {
-          /**
-           * This shows that we should have a handler to invoke getting all the held calls from within the adapter.
-           */
-          setHeldCalls(heldCalls.concat([call]));
+        await adapter.switchCall(newCall, call);
+        if (callAgent) {
+          setHeldCalls(callAgent.calls.filter((c) => c.state === 'LocalHold'));
         }
         /**
          * In the changes to the UI Lib we are now removing incomingCalls when we accept them so we want to capture the 
